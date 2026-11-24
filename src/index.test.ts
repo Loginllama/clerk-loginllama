@@ -47,7 +47,7 @@ const user = {
 };
 
 // Stands in for both the Clerk Backend API and the LoginLlama API.
-let score: number | 'down' = 0;
+let score: number | 'down' | 'error' = 0;
 let calls: { url: string; body?: string }[] = [];
 let source: string | null = null;
 globalThis.fetch = async (input, init) => {
@@ -56,6 +56,7 @@ globalThis.fetch = async (input, init) => {
   if (url === 'https://loginllama.app/api/v1/login/check') {
     source = new Headers(init?.headers).get('x-loginllama-source');
     if (score === 'down') throw new TypeError('fetch failed');
+    if (score === 'error') return new Response('{}', { status: 500 });
     return Response.json({
       data: { attributes: { risk_score: score, risk_codes: [] } }
     });
@@ -160,4 +161,44 @@ test('refuses to start without an API key', () => {
 test('tells LoginLlama which integration sent the check', async () => {
   await handler(signedWebhook('session.created'));
   assert.equal(source, 'clerk-loginllama');
+});
+
+test('refuses to start without a Clerk secret key', () => {
+  const saved = process.env.CLERK_SECRET_KEY;
+  delete process.env.CLERK_SECRET_KEY;
+  try {
+    assert.throws(
+      () => loginLlamaWebhook({ apiKey: 'test-key' }),
+      /CLERK_SECRET_KEY/
+    );
+  } finally {
+    if (saved) process.env.CLERK_SECRET_KEY = saved;
+  }
+});
+
+test('keeps the session when the score is below the block threshold', async () => {
+  score = 7;
+  const response = await handler(signedWebhook('session.created'));
+  assert.equal(await response.text(), 'ok');
+  assert.equal(revoked(), false);
+});
+
+test('revokes at a custom block threshold', async () => {
+  score = 5;
+  const strict = loginLlamaWebhook({
+    apiKey: 'test-key',
+    clerkSecretKey: 'sk_test_example',
+    signingSecret: SIGNING_SECRET,
+    blockAt: 5
+  });
+  const response = await strict(signedWebhook('session.created'));
+  assert.equal(await response.text(), 'revoked');
+  assert.equal(revoked(), true);
+});
+
+test('keeps the session when LoginLlama returns an error status', async () => {
+  score = 'error';
+  const response = await handler(signedWebhook('session.created'));
+  assert.equal(await response.text(), 'ok');
+  assert.equal(revoked(), false);
 });
