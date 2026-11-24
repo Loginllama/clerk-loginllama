@@ -33,11 +33,11 @@ subscribe it to `session.created`.
 
 Set these in your environment:
 
-| Variable | Where to get it |
-| --- | --- |
-| `LOGINLLAMA_API_KEY` | [loginllama.app/signup](https://loginllama.app/signup?utm_source=npm&utm_medium=readme&utm_campaign=clerk-loginllama). The first 1,000 checks are free. |
-| `CLERK_SECRET_KEY` | Clerk dashboard, **API keys** |
-| `CLERK_WEBHOOK_SIGNING_SECRET` | The webhook endpoint you just made |
+| Variable                       | Where to get it                                                                                                                                         |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `LOGINLLAMA_API_KEY`           | [loginllama.app/signup](https://loginllama.app/signup?utm_source=npm&utm_medium=readme&utm_campaign=clerk-loginllama). The first 1,000 checks are free. |
+| `CLERK_SECRET_KEY`             | Clerk dashboard, **API keys**                                                                                                                           |
+| `CLERK_WEBHOOK_SIGNING_SECRET` | The webhook endpoint you just made                                                                                                                      |
 
 ## What it does
 
