@@ -31,21 +31,44 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
-      - name: Set up Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
-        with:
-          node-version: ${{ matrix.node-version }}
-
       - name: Install pnpm
         uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6
         with:
           run_install: false
 
+      - name: Set up Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: pnpm
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Lint
+        run: pnpm lint
+
+      - name: Check formatting
+        run: pnpm format:check
+
+      - name: Build
+        run: pnpm build
+
+      # shell: bash adds pipefail, so a failing test or coverage gate fails the step through tee.
       - name: Run tests
-        run: pnpm test
+        shell: bash
+        run: pnpm test 2>&1 | tee test-output.txt
+
+      - name: Summarise coverage
+        if: always()
+        run: |
+          {
+            echo "## Coverage (Node ${{ matrix.node-version }})"
+            echo '```'
+            sed -n '/# start of coverage report/,/# end of coverage report/p' test-output.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          grep '# all files' test-output.txt || true
 
   release-please:
     needs: test
